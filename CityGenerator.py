@@ -1,3 +1,23 @@
+#==============================================================================
+# TODO
+# - Roads
+# -- Figure out whether to build vertical or horizontal roads
+# -- Build appropriately varying length roads
+# - Greenspace
+# -- Add greenspace without road connection
+# 
+# Open concerns
+# - valuator denies valuation if there is no road connection
+# - there is no generate() function
+# - the color scheme is not fun
+# - some roads override
+#==============================================================================
+
+
+
+
+
+
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -110,12 +130,7 @@ def valuateFor(lotSizeX, lotSizeY):
     return [mVal, mX, mY]
 
 
-#==============================================================================
-# TODO
-# - Get valuation for a vertical and horizontal 1x10 road - IN PROGRESS
-# - Build to the highest value place
-# 
-#==============================================================================
+
 
 # Key Activities
 valuate()
