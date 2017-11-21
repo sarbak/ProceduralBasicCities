@@ -21,9 +21,21 @@ def valuate():
         for k in range(0,landSize):
             landValue[j][k] = landSize*2 - (abs(j-landSize/2) + abs(k-landSize/2))
 
-def road():
+def buildInitialRoad():
     for i in range (0,landSize):
         land[i][25] = 2
+
+def buildNewRoad():
+#    bestHor = valuateFor(10,1)
+
+    
+    bestVer = valuateFor(1,10)
+    buildOnLot(bestVer[1],bestVer[2],1, 10, 2, False)
+    
+#    if(bestHor[0]>bestVer[0]):
+#        buildOnLot(bestHor[1],bestHor[2],10, 1, 2, False)
+#    else:
+#        buildOnLot(bestVer[1],bestVer[2],1, 10, 2, False)
 
 def build():
     
@@ -41,7 +53,7 @@ def buildOnLot(mX, mY, lotSizeX, lotSizeY, val, border):
     for l in range(0,lotSizeX):
         for m in range(0,lotSizeY):
 
-            land[mX+l][mY+m] = 1
+            land[mX+l][mY+m] = val
             
             if(border == True):
                 # The borders are half occupied
@@ -97,30 +109,22 @@ def valuateFor(lotSizeX, lotSizeY):
     
     return [mVal, mX, mY]
 
+
 #==============================================================================
-# TODOS
-# - Sum up neighbor values - DONE
-# - Pick the highest spot, print its coordinates - DONE
-# - Put road into a function - DONE
-# - Build onto that location, on data - DONE
-# - Do not build on the road - DONE
-# - Build one pixel inside the lot - DONE
-# - Give random lot sizes - DONE
-# - Let the lot size change by x and y - DONE
-# - Separate out the valuation process - DONE
-# - Let it only build next to a road - DONE
+# TODO
+# - Get valuation for a vertical and horizontal 1x10 road - IN PROGRESS
+# - Build to the highest value place
 # 
 #==============================================================================
 
-#print(landValue)
-
-# Adding a new road
-
+# Key Activities
 valuate()
-road()
+buildInitialRoad()
 
-for j in range (0,20):
-    build()
+for j in range (0,4):
+    for k in range (0,15):
+        build()
+    buildNewRoad()
 
 # Visualizing the array
 plt.imshow(land,aspect='auto', interpolation='none',
