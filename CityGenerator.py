@@ -25,16 +25,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import random
+import matplotlib.cm as cm
 
 landSize = 100
 landLimits = 100
 randomSizeFactor = 8
-rounds = 10
-intensity = 10
+rounds = 25 #10
+intensity = 12 #10
 
-codeRoad = 4
-codeHighway = 5
-codePark = 3
+codeRoad = 7
+codeHighway = 8
+codePark = 5
 codeBuilding = 2
 codeBuffer = 1
 
@@ -58,8 +59,16 @@ def buildHighway():
         land[i][int(landSize/2)] = codeHighway
         land[i][int(landSize/2)+1] = codeHighway
 
+def buildPark():
+    lotSizeX = random.randint(int(randomSizeFactor/2),randomSizeFactor)
+    lotSizeY = random.randint(int(randomSizeFactor/2),randomSizeFactor)
+
+    maxLot = valuateFor(lotSizeX, lotSizeY, 'park')
+
+    buildOnLot(maxLot[1],maxLot[2],lotSizeX, lotSizeY, codePark, False)
+
 def buildNewRoad():
-    length = random.randint(randomSizeFactor,randomSizeFactor*2)
+    length = random.randint(randomSizeFactor, int(randomSizeFactor*(intensity/3)))
     bestHor = valuateFor(length,1, 'road')   
     bestVer = valuateFor(1,length, 'road')
     #print("best hor and ver", bestHor, bestVer)
@@ -105,7 +114,7 @@ def checkForRoad(x,y, lotSizeX,lotSizeY):
     for j in range(-1,lotSizeX+1):
        for k in range(-1,lotSizeY+1):
            if(x+j >= 0 and x+j<landLimits and y+k >= 0 and y+k < landLimits):
-               if(land[x+j][y+k] == codeRoad):
+               if(land[x+j][y+k] >= codeRoad):
                    roadAccess = True
     
     return roadAccess       
@@ -145,10 +154,7 @@ def valuateFor(lotSizeX, lotSizeY, use):
 
 
            if(use == 'road'):
-                
-               # Find the biggest differentials
-               #buildValue[j][k] = abs(landValue[j][k] - landValue[j+lotSizeX][k+lotSizeY])
-                                
+                                                
                # Discount it if it touches the road too much
                for l in range(0,lotSizeX):
                   for m in range(0,lotSizeY):
@@ -156,18 +162,28 @@ def valuateFor(lotSizeX, lotSizeY, use):
                       if(land[j+l][k+m] >= codeBuffer):
                           buildValue[j][k] = 0
                       else:
-                          buildValue[j][k] += landValue[j+l][k+m]
+                          if(not checkForRoad(j+l,k+m,1,1)):
+                              buildValue[j][k] += landValue[j+l][k+m]
+                          
                       # Check if that location touches the road much
-
-                      #roadAccess = checkForRoad(j+l,k+m,1,1)
-                      #if(roadAccess == True):
-                          #buildValue[j][k] -= 1
                
                roadAccess = checkForRoad(j,k,lotSizeX,lotSizeY)
                if(roadAccess == False):
                   buildValue[j][k] = 0 
-                  
-             # Keep track of the maximum
+           
+           if(use == 'park'):
+                                                
+               for l in range(0,lotSizeX):
+                  for m in range(0,lotSizeY):
+    
+                      if(land[j+l][k+m] >= codeBuffer):
+                          buildValue[j][k] = 0
+                      else:
+                          buildValue[j][k] += landValue[j+l][k+m]
+                          
+
+            
+           # Keep track of the maximum
            if(buildValue[j][k]>mVal):
                 
                mVal = buildValue[j][k]
@@ -190,11 +206,10 @@ for j in range (0,rounds):
     for k in range (0,intensity):
         build()
     buildNewRoad()
-    plt.imshow(land,aspect='auto', interpolation='none',
-           extent=extents(x) + extents(y), origin='lower')
+    buildPark()
 
 # Visualizing the array
-plt.imshow(land,aspect='auto', interpolation='none',
+plt.imshow(land,cmap=cm.hot, aspect='auto', interpolation='none',
            extent=extents(x) + extents(y), origin='lower')
 
 i = 0
