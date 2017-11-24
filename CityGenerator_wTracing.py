@@ -20,38 +20,55 @@ import os
 import random
 import matplotlib.cm as cm
 
-landSize = 100
-landLimits = 100
-randomSizeFactor = 8
-rounds = 20 #10
-intensity = 5 #10
+# The main controller assumptions
+scale = 2
+usageCoefficient = 1
+showIntermediateMaps = True
 
-codeRoad = 7
-codeHighway = 8
-codePark = 5
-codeBuilding = 2
-codeBuffer = 1
+attempts = 10
+
+landSize = scale * 30
+landLimits = scale * 30
+randomSizeFactor = scale * 3
+rounds = scale * 1 #It should be 3
+intensity = int(scale * 1.5) #10
+start = int(landSize/2)
+
+tX = 0 # Tracing position
+tY = start # Tracing position
+
+vectorX = [0,1,0,-1,0]
+vectorY = [0,0,1,0,-1]
+
+codeRoad = 7 #* usageCoefficient
+codeHighway = 20 #* usageCoefficient
+codePark = 5 # was 5
+codeBuilding = 2 # was 2
+codeBuffer = 2
 
 # Initializing the array
 x = np.linspace(0, landLimits, landSize)
 y = np.linspace(0, landLimits, landSize)
 land = np.zeros((landSize,landSize))
+
 landValue = np.zeros((landSize,landSize))
 landPrint = np.zeros((landSize,landSize))
+usage = landPrint
 
-def fillLot(x,y, lotSizeX,lotSizeY, filled):
+#==============================================================================
+# # FUNCTIONS TO GENERATE THE CITY
+#==============================================================================
+
+def fillLot(x,y, lotSizeX,lotSizeY, filled, road):
     for j in range(0,lotSizeX):
        for k in range(0,lotSizeY):
            if(filled):
                landPrint[x+j][y+k] = 1
+           if(road):
+               landPrint[x+j][y+k] = codeRoad
            else:
                if(j == 0 or j == (lotSizeX-1) or k == 0 or k == (lotSizeY-1)):
                    landPrint[x+j][y+k] = 2
-           
-
-def extents(f):
-  delta = f[1] - f[0]
-  return [f[0] - delta/2, f[-1] + delta/2]
 
 def valuate():
     for j in range(0,landSize):
@@ -59,23 +76,20 @@ def valuate():
             landValue[j][k] = landSize*2 - (abs(j-landSize/2) + abs(k-landSize/2))
 
 def buildHighway():
-    #for i in range (0,landSize):
-    #    land[i][int(landSize/2)] = codeHighway
-    #    land[i][int(landSize/2)+1] = codeHighway
-    #print(0, int(landSize/2), landSize-1, 3, codeHighway)    
-    buildOnLot(0, int(landSize/2), landSize-1, 2, codeHighway, False)
+
+    buildOnLot(0, start , landSize-1, 2, codeHighway, False)
     
 
 def buildPark():
     lotSizeX = random.randint(int(randomSizeFactor/2),randomSizeFactor)
     lotSizeY = random.randint(int(randomSizeFactor/2),randomSizeFactor)
 
-    maxLot = valuateFor(lotSizeX, lotSizeY, 'park')
+    maxLot = valuateFor(lotSizeX, lotSizeY, 'building')
 
     buildOnLot(maxLot[1],maxLot[2],lotSizeX, lotSizeY, codePark, False)
 
 def buildNewRoad():
-    length = random.randint(randomSizeFactor, int(randomSizeFactor*(intensity/2)))
+    length = random.randint(randomSizeFactor, randomSizeFactor*intensity)
     bestHor = valuateFor(length,1, 'road')   
     bestVer = valuateFor(1,length, 'road')
     #print("best hor and ver", bestHor, bestVer)
@@ -99,6 +113,9 @@ def build():
            
 def buildOnLot(mX, mY, lotSizeX, lotSizeY, val, buffer):
     
+    global tX
+    global tY
+    
     announceConstruction(mX, mY, lotSizeX, lotSizeY, val, buffer)
     
     # Build on the land
@@ -115,25 +132,22 @@ def buildOnLot(mX, mY, lotSizeX, lotSizeY, val, buffer):
                 land[mX+l][mY+lotSizeY-1] = codeBuffer
     
     # Prepare the print            
-    fill = False
-    if(val == codePark):
-        fill = True
-    if(buffer):
-        fillLot(mX+1, mY+1, lotSizeX-2, lotSizeY-2, fill)
-    else:
-        fillLot(mX, mY, lotSizeX, lotSizeY, fill)
-
-def announceConstruction(mX, mY, lotSizeX, lotSizeY, val, buffer):
-    text_file = open("instructions3.txt", "a")
-    proportion = 1200 / landSize
-    phrase = "{" + str(int(mX*proportion)) + ", " +  str(int((landSize - mY)*proportion)) + ", " + str(int(lotSizeX*proportion)) + ", " + str(int(lotSizeY*proportion)) + ", " + str(val) + "}"
-    text_file.write(phrase)
-    text_file.write(", ")
-#    np.savetxt("instructions.txt", phrase, fmt="%s")
-    print(phrase)
-    text_file.close()
-
-
+    road = False
+    if(val>= codeRoad):
+        road = True
+    fillLot(mX, mY, lotSizeX, lotSizeY, False, road)
+#==============================================================================
+#     fill = False
+#     if(val == codePark):
+#         fill = True
+#         
+#     if(buffer):
+#         fillLot(mX+1, mY+1, lotSizeX-2, lotSizeY-2, fill,road)
+#     else:
+#         fillLot(mX, mY, lotSizeX, lotSizeY, fill, road)
+#     #tX = mX
+#==============================================================================
+    #tY = mY
 
 def checkForRoad(x,y, lotSizeX,lotSizeY):
     
@@ -225,11 +239,115 @@ def valuateFor(lotSizeX, lotSizeY, use):
 
 
 
+#==============================================================================
+# # FUNCTIONS TO PRINT, EXPOSE
+#==============================================================================
 
 
+def announceConstruction(mX, mY, lotSizeX, lotSizeY, val, buffer):
+    text_file = open("instructions3.txt", "a")
+    proportion = 1200 / landSize
+    phrase = "{" + str(int(mX*proportion)) + ", " +  str(int((landSize - mY)*proportion)) + ", " + str(int(lotSizeX*proportion)) + ", " + str(int(lotSizeY*proportion)) + ", " + str(val) + "}"
+    text_file.write(phrase)
+    text_file.write(", ")
+#    np.savetxt("instructions.txt", phrase, fmt="%s")
+    if(showIntermediateMaps):
+        print(phrase)
+    text_file.close()
 
 
-# Key Activities
+def trace():
+    instruct(tX, tY)
+    usage = landPrint
+    showMap(usage)
+    # set up all activities, multiple usage array
+    # start from the start point
+    # instruct the start point
+    while(attempts>0):
+        getMoving()
+    
+def getMoving():
+    global tX
+    global tY
+    global attempts
+    tX = 0
+    tY = start
+
+    while(True):
+        print("starting from", tX, tY)
+        direction = scan()
+        print("getMoving direction: ", direction)
+        if(direction == 0):
+            attempts -= 1
+        tX, tY = step(direction)
+        showMap(usage)
+        print("at the end of move ", tX, tY)
+    
+def scan():
+    global tX
+    global tY
+    temp = codeHighway
+    tempDir = 0
+    # Figure out which direction to go
+    for i in range(1,4):
+        if(availability(tX+vectorX[i], tY+vectorY[i])>0 and availability(tX+vectorX[i], tY+vectorY[i]) <= temp):
+            temp = availability(tX+vectorX[i], tY+vectorY[i])
+            tempDir = i
+    return tempDir
+    
+
+def availability(x,y):
+    # Check if that cell is available
+    if(x < 0 and x>=landLimits and y < 0 and y >= landLimits):
+        return -1
+    return usage[x][y] 
+        #print("available: ", x,y)
+        #return True    
+    #return False
+
+def step(direction):
+
+    tempX = tX
+    tempY = tY
+
+    # keep moving the tempX if it is still available in the direction
+    while(availability(tempX+vectorX[direction], tempY+vectorY[direction])>0):
+        if(usage[tempX][tempY] >= codeRoad):
+            for i in range(1,4):
+                if(availability(tempX+vectorX[i], tempY+vectorY[i]) > 0 and availability(tempX+vectorX[i], tempY+vectorY[i])<availability(tempX+vectorX[direction], tempY+vectorY[direction])):
+                    return tempX, tempY
+        tempX = tempX+vectorX[direction]
+        tempY = tempY+vectorY[direction]
+        #usage[tempX][tempY] -= 1
+        if(usage[tempX][tempY] < codeRoad):
+            usage[tempX][tempY] -= 1
+        #print("stepping to: ", tempX, tempY, " with direction of ", direction, vectorX[direction], vectorY[direction])
+    
+    return tempX, tempY
+
+def instruct(x,y):
+    text_file = open("instructs1.txt", "a")
+    text_file.write(str(x) + ", " + str(y))
+    print(x,y)
+    text_file.write(", ")
+    return
+
+# This is for pylotlib function. I don't know what it does
+def extents(f):
+  delta = f[1] - f[0]
+  return [f[0] - delta/2, f[-1] + delta/2]
+
+def showMap(mapToShow):
+    
+    plt.imshow(mapToShow,cmap=cm.hot, aspect='auto', interpolation='none',
+               extent=extents(x) + extents(y), origin='lower')
+    plt.show()
+
+
+#==============================================================================
+# # ACTUAL PROGRAM
+#==============================================================================
+
 valuate()
 buildHighway()
 
@@ -239,15 +357,16 @@ for j in range (0,rounds):
     buildNewRoad()
     buildPark()
     # Visualizing the array
-    plt.imshow(land,cmap=cm.hot, aspect='auto', interpolation='none',
-           extent=extents(x) + extents(y), origin='lower')
-    plt.show()
+    if(showIntermediateMaps):
+        showMap(landPrint)
 
-
+trace()
 
 i = 0
 while os.path.exists('{}{:d}.png'.format("city", i)):
     i += 1
 plt.savefig('{}{:d}.png'.format("city", i))
 
-
+plt.imshow(land,cmap=cm.hot, aspect='auto', interpolation='none',
+       extent=extents(x) + extents(y), origin='lower')
+plt.show()
